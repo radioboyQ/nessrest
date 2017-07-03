@@ -49,7 +49,7 @@ class Scanner(object):
     Scanner object
     '''
     def __init__(self, url, login='', password='', api_akey='', api_skey='',
-                 insecure=False, ca_bundle='', debug=False):
+                 insecure=True, ca_bundle='', debug=False):
         self.api_akey = None
         self.api_skey = None
         self.use_api = False
