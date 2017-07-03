@@ -49,13 +49,13 @@ class Scanner(object):
     Scanner object
     '''
     def __init__(self, url, login='', password='', api_akey='', api_skey='',
-                 insecure=False, ca_bundle=''):
+                 insecure=False, ca_bundle='', debug=False):
         self.api_akey = None
         self.api_skey = None
         self.use_api = False
         self.name = ''
         self.policy_name = ''
-        self.debug = False
+        self.debug = debug
         self.format = ''
         self.format_start = ''
         self.format_end = ''
@@ -217,6 +217,12 @@ class Scanner(object):
             elif not req.text:
                 self.res = {}
 
+            if req.status_code != 200 and req.json()['error'] == 'Invalid Credentials':
+                raise NessusException.InvalidCredentials('Provided credentials didn\'t work')
+            elif req.status_code != 200 and req.json()['error'] == 'The requested file was not found':
+                raise NessusException.RequestedFileNotFound('Requested file not found')
+
+
             if req.status_code != 200:
                 print("*****************START ERROR*****************")
                 if private:
@@ -234,6 +240,8 @@ class Scanner(object):
                 print("\n")
                 self.pretty_print()
                 print("******************END ERROR******************")
+
+                raise NessusConnectionFailure('Failed to connect to remote host') from None
 
             if self.debug:
                 # This could also contain "pretty_print()" but it makes a lot of
@@ -1058,6 +1066,17 @@ class Scanner(object):
                     json_req=False)
 
 ################################################################################
+    def scan_import(self, scan_name, dest_folder: int):
+        """
+        You must upload a scan before you can import it!
+        """
+        data = {'file': scan_name, 'folder_id': dest_folder}
+        self.action(action="scans/import",
+                    method="post",
+                    extra=data,
+                    json_req=True)
+
+################################################################################
     def policy_import(self, filename):
         '''
         Import a previously uploaded .nessus file as a policy.
@@ -1091,3 +1110,14 @@ class Scanner(object):
 if __name__ == "__main__":
 
     print("Import the module, do not call directly.")
+
+class NessusException(Exception):
+    """General Exception"""
+    class FailureToConnect(Exception):
+        """Failed to connect to specified server"""
+    class InvalidCredentials(Exception):
+        """Bad creds"""
+    class RequestedFileNotFound(Exception):
+        """File requested from server not found"""
+class NessusConnectionFailure(Exception):
+    """Generic connection failure"""
